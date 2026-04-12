@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+artifacts/
+logs/
+cache/
+data/
+
+attn_res/
+open-attention-residuals/
+mHC-manifold-constrained-hyper-connections/

@@ -1,0 +1,87 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+\title{Tiny-Scale Feasibility Study of Block Attention Residuals with Static mHC-lite}
+\author{Autonomous Research Agent}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report studies a small-hardware combination of Block Attention Residuals and a simplified static manifold-constrained hyper-connection mechanism. The implementation target is a single 8 GB laptop GPU, so the contribution is not a scale reproduction of either source paper. Instead, the report focuses on a reproducible tiny decoder-only language model, a clean merged architecture, and a compact experiment suite on TinyStories with Shakespeare smoke tests. The combined variant is designed so that Attention Residuals performs depth-wise source selection while static mHC-lite mixes residual streams under doubly-stochastic constraints. The report documents the implementation, diagnostics, experiment protocol, and limitations required for a later larger-scale continuation.
+\end{abstract}
+
+\section{Introduction}
+Residual routing across depth and residual routing across streams are both active design spaces in modern language model research. Attention Residuals replaces fixed additive accumulation with learned softmax selection over prior representations, while mHC constrains multi-stream residual routing to preserve stability. This project combines the two ideas under the practical constraint of current local hardware.
+
+\section{Method}
+We use a decoder-only transformer with learned token and positional embeddings, causal self-attention, and MLP sublayers. Four variants are supported:
+\begin{itemize}
+\item baseline
+\item Block Attention Residuals only
+\item static mHC-lite only
+\item Block Attention Residuals + static mHC-lite
+\end{itemize}
+
+\subsection{Block Attention Residuals}
+At each sublayer $l$, completed block summaries and the in-progress partial block are collected as source tensors. A learned pseudo-query vector $w_l$ scores each source after RMS normalization, and a softmax over source depth produces a routed state.
+
+\subsection{Static mHC-lite}
+For the multi-stream variants, the hidden state is maintained as $B \times T \times S \times D$. For each sublayer we learn static logits for:
+\begin{itemize}
+\item $H_{res} \in \mathbb{R}^{S \times S}$, projected with Sinkhorn to an approximately doubly stochastic matrix
+\item $H_{pre} \in \mathbb{R}^{S}$, normalized with softmax
+\item $H_{post} \in \mathbb{R}^{S}$, normalized with softmax
+\end{itemize}
+The routed stream state is reduced with $H_{pre}$, processed by the sublayer, injected back into streams with $H_{post}$, and mixed with $H_{res}$.
+
+\section{Experimental Setup}
+The main dataset is TinyStories. Shakespeare is retained as a smoke and regression track. The study is intentionally limited to small models that fit comfortably on an 8 GB GPU. The primary comparison matrix is:
+\begin{itemize}
+\item baseline
+\item attnres\_block
+\item mhc
+\item attnres\_mhc
+\end{itemize}
+
+\section{Results}
+This section is updated from the actual JSON summaries in \texttt{artifacts/runs}. The implementation writes:
+\begin{itemize}
+\item per-step training metrics
+\item evaluation summaries
+\item checkpoints
+\item text samples
+\item routing heatmaps
+\end{itemize}
+
+\subsection{Pending Run Table}
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Variant & Params & Val loss & Val ppl \\
+\midrule
+baseline & pending & pending & pending \\
+attnres\_block & pending & pending & pending \\
+mhc & pending & pending & pending \\
+attnres\_mhc & pending & pending & pending \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Discussion}
+The current implementation makes two deliberate simplifications:
+\begin{itemize}
+\item only Block Attention Residuals are evaluated in the main matrix
+\item the mHC component uses a static per-sublayer constrained routing scheme rather than the dynamic paper formulation
+\end{itemize}
+These choices make the system implementable and testable under the available hardware budget while preserving the core merged routing hypothesis.
+
+\section{Conclusion}
+This repository now contains a root-level implementation target for a tiny-scale AttnRes+mHC study. The immediate next step is to populate the pending results table with completed smoke and TinyStories runs, then revise the discussion based on the observed routing behavior and validation loss trends.
+
+\end{document}
